@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+
+    body {
+      height: 5000px;
+    }
+
+    #show-notes {
+      position: fixed;
+      top: 1em;
+      right: 1em;
+    }
+
+    [learning-element-ref="page1"] {
+      position: fixed;
+      top: 2em;
+      right: 1em;
+      display:none;
+    }
+
+    [learning-element-ref="page1"] .actionplan {
+      padding: 10px;
+      background-color: yellowgreen;
+    }
+
+  </style>
+</head>
+<body>
+
+<button id="show-notes">Show Notes</button>
+
+<div learning-element="actionplan" learning-element-ref="page1" learning-element-options='{}'></div>
+
+<!--<div learning-element="actionplan" learning-element-ref="page2"></div>-->
+<!--<div learning-element="actionplan" learning-element-ref="page3"></div>-->
+<!--<div learning-element="actionplan" learning-element-ref="page4"></div>-->
+<!--<div learning-element="actionplan" learning-element-ref="page5"></div>-->
+
+<div learning-element="actionplan" learning-element-ref="takeaway"></div>
+
+<!-- START: learning-element libs -->
+<script src="./config.js"></script>
+<!-- END: learning-element libs -->
+
+<!-- START: show/hide UI -->
+
+<script src="https://code.jquery.com/jquery-3.1.1.js" integrity="sha256-16cdPddA6VdVInumRGo6IbivbERE8p7CQR3HzTBuELA=" crossorigin="anonymous"></script>
+
+<script>
+
+  $(document).on('click', '#show-notes', function(event){
+    $('[learning-element-ref="page1"]').toggle();
+    var state = $(event.target).html();
+    $(event.target).html( state === 'Show Notes' ? 'Hide Notes' : 'Show Notes');
+  });
+
+</script>
+
+</body>
+</html>
