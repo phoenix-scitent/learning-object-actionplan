@@ -44951,6 +44951,8 @@ most.fromEvent('watcher::transformComplete', _partybus.bus).tap(function () {
   cache = {};
 }).drain();
 
+console.log('CREATE WATCH STREAM', Date.now());
+
 var learningElement$ = most.fromEvent('learningElements::found', _partybus.bus).flatMap(function (els) {
   return most.from(els);
 }).filter(function (el) {
@@ -46783,7 +46785,9 @@ var configureActionplan = function configureActionplan(_ref) {
       globalConfiguration = _ref.globalConfiguration,
       dataSource = _ref.dataSource;
 
-  _watcher.learningElement$.filter(function (el) {
+  _watcher.learningElement$.tap(function (el) {
+    console.log('==> isActionplan? ', el);
+  }).filter(function (el) {
     return el.getAttribute('learning-element') === 'actionplan';
   }).tap(function (el) {
     return el.innerHTML = '<div class="mount"></div>';
