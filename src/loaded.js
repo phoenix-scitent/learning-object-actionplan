@@ -108,9 +108,16 @@ var loaded = function(learningElement){
   };
 
   var question = function(model){
+    var prehead = R.pathOr('', ['data', 'config', 'element', 'html', 'prehead'], model);
+    var prebody = R.pathOr('', ['data', 'config', 'element', 'html', 'prebody'], model);
+    var prefoot = R.pathOr('', ['data', 'config', 'element', 'html', 'prefoot'], model);
+
     return h('div', { class: { 'question': true } }, [
+      virtualize(prehead),
       questionTitle(model),
-      editor(model)
+      virtualize(prebody),
+      editor(model),
+      virtualize(prefoot)
     ]);
   };
 
@@ -134,7 +141,14 @@ var loaded = function(learningElement){
       var contextSectionShouldDisplay = R.pathOr(false, ['data', 'config', 'element', 'meta', 'each', 'markup', 'inner', 'context', 'section', 'display'], model);
       var contextDateShouldDisplay = R.pathOr(false, ['data', 'config', 'element', 'meta', 'each', 'markup', 'inner', 'context', 'date', 'display'], model);
 
-      var value = R.pathOr('---', ['value'], sectionData);
+      var value = R.compose(
+        virtualize,
+        R.join(''),
+        R.map(function(line){ return `<p>${line}</p>` }),
+        R.split('\n'),
+        R.pathOr('---', ['value'])
+      )(sectionData);
+
       var text = R.pathOr('---', ['text'], sectionData);
       var context = R.pathOr([], ['context'], sectionData);
       var section = R.pathOr('---', [0], context);
@@ -150,6 +164,7 @@ var loaded = function(learningElement){
   };
 
   var takeawayBody = function(model){
+    var loaderHtml = R.pathOr(null, ['data', 'config', 'element', 'loader'], model);
     var element = R.pathOr('ul', ['data', 'config', 'element', 'meta', 'each', 'markup', 'parent', 'element'], model);
     var classes = R.pathOr('', ['data', 'config', 'element', 'meta', 'each', 'markup', 'parent', 'classes'], model);
     var takeaways = R.pathOr({}, ['takeaway'], model);
@@ -158,9 +173,13 @@ var loaded = function(learningElement){
       R.mapObjIndexed(takeawaySection(model))
     )(takeaways);
 
-    // ordering done here?
+    //TODO: section ordering done here?
 
-    return h(element, { class: makeSnabbdomClasses(classes) }, sections);
+    if(sections.length > 0){
+      return h(element, { class: makeSnabbdomClasses(classes) }, sections);
+    } else {
+      return loaderHtml ? h('div', {}, [ virtualize(loaderHtml) ]) : h('div', {}, '');
+    }
   };
 
   var takeawayHead = function(model){
@@ -210,7 +229,7 @@ var loaded = function(learningElement){
   };
 
   var loading = function(model){
-    var loaderHtml = R.pathOr(null, ['loader'], model);
+    var loaderHtml = R.pathOr(null, ['data', 'config', 'element', 'loader'], model);
 
     if(loaderHtml){
       return wrapper(model, 'loading', [

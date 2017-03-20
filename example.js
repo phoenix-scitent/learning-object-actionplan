@@ -24,6 +24,12 @@ var actionplans = {
     },
     element: {
       type: 'question',
+      html: {
+        prehead: '<div>Stuff...</div>',
+        prebody: '<div>Info...</div>',
+        prefoot: '<div>Remember...</div>'
+      },
+      loader: '<div>LOADING...</div>',
       meta: {
         text: 'Enter 10 items...',
         markup: {
@@ -60,11 +66,11 @@ var actionplans = {
     },
     element: {
       type: 'takeaway',
+      loader: '<div>LOADING TAKEAWAY...</div>',
       html: {
         prehead: '<div>Stuff...</div>',
         prebody: '<div>Info...</div>',
         prefoot: '<div>Remember...</div>'
-
       },
       meta: {
         markup: {
