@@ -8,6 +8,8 @@ import { loaded } from './loaded.js';
 
 const configureActionplan = function({configuration, globalConfiguration, dataSource}){
 
+  window.actionPlanStream = learningElement$;
+
   learningElement$
     .tap(el => { console.log('==> isActionplan? ', el) })
     .filter(el => el.getAttribute('learning-element') === 'actionplan')
