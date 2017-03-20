@@ -1,4 +1,10 @@
-###
+### setup
+
+- add this to package.json `dependencies` in `working/<course>` `"learning-object-actionplan": "git+ssh://git@github.com/phoenix-scitent/learning-object-actionplan.git#latest"` 
+- run `npm install`
+- create `src/js/actionplans` directory
+- create `actionplan_config.js`
+- add `import actionplanConfig from './actionplan_config';` to `index.js`
 
 ### styles
 
