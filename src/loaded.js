@@ -708,7 +708,8 @@ var loaded = function(learningElement){
 
   var setActionplanData = function(takeaway){
     var set = R.propOr(function(){}, 'setActionplanData', data);
-    set({ takeaway }).drain(); //TODO: find way to make this universal to firebase and tincan api...
+    console.log('==> ABOUT TO SET ACTIONPLAN TAKEAWAY', takeaway);
+    set({ takeaway }).tap(function(){ console.log('==> SET ACTIONPLAN TAKEAWAY', arguments) }).drain(); //TODO: find way to make this universal to firebase and tincan api...
   };
 
   most.fromEvent('data::setActionplanData', emitter)
