@@ -45,6 +45,7 @@ var actionplans = {
       loader: '<div>LOADING...</div>',
       meta: {
         text: 'Enter 10 items...',
+        template: '<div>{{text}}</div>',
         markup: {
           element: 'h3',
           classes: ''
@@ -46212,9 +46213,10 @@ var loaded = function loaded(learningElement) {
   var questionTitle = function questionTitle(model) {
     var element = _ramda2.default.pathOr('p', ['data', 'config', 'element', 'meta', 'markup', 'element'], model);
     var classes = _ramda2.default.pathOr('', ['data', 'config', 'element', 'meta', 'markup', 'classes'], model);
-    var title = _ramda2.default.pathOr('---', ['data', 'config', 'element', 'meta', 'text'], model);
+    var value = _ramda2.default.pathOr('---', ['data', 'config', 'element', 'meta', 'text'], model);
+    var title = _ramda2.default.compose(_ramda2.default.replace(/\{\{text\}\}/, value), _ramda2.default.pathOr(value, ['data', 'config', 'element', 'meta', 'template']))(model);
 
-    return h('div', {}, [h(element, { class: makeSnabbdomClasses(classes) }, title)]);
+    return h('div', {}, [h(element, { class: makeSnabbdomClasses(classes) }, [(0, _snabbdomVirtualize2.default)(title)])]);
   };
 
   var handleEditorEntry = function handleEditorEntry(elm, text, context) {

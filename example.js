@@ -32,6 +32,7 @@ var actionplans = {
       loader: '<div>LOADING...</div>',
       meta: {
         text: 'Enter 10 items...',
+        template: '<div>{{text}}</div>',
         markup: {
           element: 'h3',
           classes: ''

@@ -80,10 +80,16 @@ var loaded = function(learningElement){
   var questionTitle = function(model){
     var element = R.pathOr('p', ['data', 'config', 'element', 'meta', 'markup', 'element'], model);
     var classes = R.pathOr('', ['data', 'config', 'element', 'meta', 'markup', 'classes'], model);
-    var title = R.pathOr('---', ['data', 'config', 'element', 'meta', 'text'], model);
+    var value = R.pathOr('---', ['data', 'config', 'element', 'meta', 'text'], model);
+    var title = R.compose(
+      R.replace(/\{\{text\}\}/, value),
+      R.pathOr(value, ['data', 'config', 'element', 'meta', 'template'])
+    )(model);
 
     return h('div', {}, [
-      h(element, { class: makeSnabbdomClasses(classes) }, title)
+      h(element, { class: makeSnabbdomClasses(classes) }, [
+        virtualize(title)
+      ])
     ])
   };
 
