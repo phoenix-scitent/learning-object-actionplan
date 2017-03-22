@@ -100,7 +100,7 @@ var loaded = function(learningElement){
     var placeholder = R.pathOr('', ['data', 'config', 'element', 'meta', 'placeholder'], model);
     var text = R.pathOr('', ['data', 'config', 'element', 'meta', 'text'], model);
     var context = R.pathOr('', ['data', 'config', 'element', 'meta', 'context'], model);
-    var value = R.pathOr('', ['value', 'value'], model);
+    var value = R.pathOr('', ['takeaway', ref, 'value'], model);
 
     var insert = function(vnode){ handleEditorEntry(vnode.elm, text, context); };
 
@@ -289,51 +289,6 @@ var loaded = function(learningElement){
 
   };
 
-  //var shouldContinue = function(model){
-  //  // shouldContinue
-  //  // Rule Engine: choose to [continue] or [complete] based on the user and bok context (current progress, history, amount of questions left, ...)
-  //
-  //  var isComplete = R.pathOr(false, ['assessment', 'isComplete'], model);
-  //
-  //  if(isComplete){
-  //    emitter.emit('intent', { type: 'changeMode', context: { mode: 'mountCompleted' } });
-  //  } else {
-  //    emitter.emit('intent', { type: 'changeMode', context: { mode: 'pickNext' } });
-  //  }
-  //
-  //  emitter.emit('internal', { type: 'action', context: { type: 'ruleEngine', rule: 'shouldContinue', context: { isComplete }, ref } });
-  //
-  //};
-  //
-  //var pickNext = function(model){
-  //  // pickNext
-  //  // Rule Engine: pull the next assessment item and [mount] based on the user and bok context (current progress, history, amount of questions left, ...)
-  //
-  //  emitter.emit('intent', { type: 'changeModeToMountNext', context: { mode: 'mountNext' } });
-  //
-  //  emitter.emit('internal', { type: 'action', context: { type: 'ruleEngine', rule: 'pickNext', context: {}, ref } });
-  //
-  //};
-  //
-  //var mountNext = function(model){
-  //
-  //  var next = R.pathOr(null, ['assessment', 'next'], model);
-  //
-  //  emitter.emit('internal', { type: 'action', context: { type: 'ruleEngine', rule: 'mountNext', context: { next }, ref } });
-  //
-  //};
-  //
-  //var isComplete = function(model){
-  //  // isComplete
-  //  // Rule Engine: calculate completion each [markComplete] and [response] user action (in case user completes before assessment is exhausted)
-  //
-  //  // true: emitter.emit('intent', { type: 'changeMode', context: { mode: 'mountCompleted } })
-  //  // false: emitter.emit('intent', { type: 'changeMode', context: { mode: 'mountProgress' } })
-  //
-  //  emitter.emit('internal', { type: 'action', context: { type: 'ruleEngine', rule: 'isComplete', ref } });
-  //
-  //};
-
   var nap = function(lastModel, model){
     // TODO: nap and vdom both use these 'state indicators' to make decision about actions to take... maybe create them in earlier function and pass into them both for use along with the model?
     var dataHasLoaded = R.compose(R.not, R.pathEq(['data', 'config'], undefined))(model);
@@ -362,36 +317,15 @@ var loaded = function(learningElement){
   var persist = function(model){
     var planId = R.pathOr('---', ['data', 'config', 'plan', 'id'], model);
     var value = R.pathOr(null, ['value'], model);
-    var valueExists = R.not(R.isNil(value));
-    var isNewValue = R.pathOr(null, ['newValue'], model);
     var isNewTakeaway = R.pathOr(null, ['newTakeaway'], model);
     var takeaway = R.pathOr({}, ['takeaway'], model);
-
-    if(valueExists && isNewValue){
-      emitter.emit('bus::sendMessage', { id: planId, type: 'value', context: { value, ref } });
-      emitter.emit('intent', { type: 'setNewValue', context: { newValue: false } });
-    }
+    var newPlan = { [planId]: takeaway };
 
     if(isNewTakeaway){
-      emitter.emit('data::setActionplanData', { [planId]: takeaway });
+      emitter.emit('data::setActionplanData', newPlan);
+      emitter.emit('bus::sendMessage', { id: planId, ref, type: 'newPlan', context: { newPlan } });
       emitter.emit('intent', { type: 'setNewTakeaway', context: { newTakeaway: false } });
     }
-
-    //var shouldSubmit = R.pathSatisfies(R.compose(R.not, R.isNil), ['responseAt'], model);
-    //var response = R.pathOr(null, ['data', 'response'], model);
-    //var question = R.pathOr('---', ['data', 'config', 'question'], model);
-    //var type = R.pathOr('---', ['data', 'config', 'input', 'type'], model);
-    ////var fromEmail = R.pathOr('---', ['context', 'user'], window);
-    ////var course = R.pathOr('---', ['context', 'course'], window);
-    ////var activity = R.pathOr('---', ['context', 'activity'], window);
-    ////var section = R.pathOr('---', ['context', 'section'], window);
-    //
-    //emitter.emit('internal', { step: 'persist', context: JSON.stringify({ shouldSubmit, response }) });
-    //
-    //if(shouldSubmit){
-    //  emitter.emit('data::setResponse', { identifier: ref, type, question, response });
-    //  emitter.emit('intent', { type: 'submitted', context: { responseAt: null } });
-    //}
 
     return model;
 
@@ -433,23 +367,9 @@ var loaded = function(learningElement){
     //    R.identity
     //);
 
-    var validateValue = R.ifElse(
-      R.compose(R.has('value'), R.pathOr({}, ['intent', 'context'])),
-      R.compose(R.identity), //TODO: write validations, if fail add to proposal.errors, if pass update proposal.model
-      R.identity
-    );
-
-    var validateTakeaway = R.ifElse(
-      R.pathEq(['intent', 'context', 'meta', 'type'], 'value'),
-      R.compose(R.identity),
-      R.identity
-    );
-
     var validations = [ // add to errors obj if necessary
-      validateMode,
+      validateMode
       //validateNext
-      validateValue,
-      validateTakeaway
     ];
 
     var validate = R.reduce((proposal, validation) => { return validation(proposal); }, R.__, validations);
@@ -489,11 +409,7 @@ var loaded = function(learningElement){
 
       return R.ifElse(
           R.compose(R.has('takeaway'), R.path(['intent', 'context'])),
-          R.cond([
-            [R.pathEq(['model', 'data', 'config', 'element', 'type'], 'question'), R.assocPath(['model', 'value'], R.path(['context', 'takeaway', ref], intent))],
-            [R.pathEq(['model', 'data', 'config', 'element', 'type'], 'takeaway'), R.assocPath(['model', 'takeaway'], R.path(['context', 'takeaway'], intent))],
-            [R.T, R.always]
-          ]),
+          R.assocPath(['model', 'takeaway'], R.path(['context', 'takeaway'], intent)),
           R.identity
       )(proposal);
     };
@@ -507,36 +423,9 @@ var loaded = function(learningElement){
       return R.ifElse(
           R.compose(R.has('value'), R.path(['intent', 'context'])),
           R.compose(
-            R.assocPath(['model', 'value'], { value, text, context }),
-            R.assocPath(['model', 'newValue'], true)
+            R.assocPath(['model', 'takeaway', ref], { value, text, context }),
+            R.assocPath(['model', 'newTakeaway'], true)
           ),
-          R.identity
-      )(proposal);
-    };
-
-    var updateNewValue = proposal => {
-      var intent = R.prop('intent', proposal);
-      return R.ifElse(
-          R.compose(R.has('newValue'), R.path(['intent', 'context'])),
-          R.assocPath(['model', 'newValue'], R.path(['context', 'newValue'], intent)),
-          R.identity
-      )(proposal);
-    };
-
-    var updateTakeaway = proposal => {
-      var intent = R.prop('intent', proposal);
-      var actionPlanId = R.path(['model', 'data', 'config', 'plan', 'id'], proposal);
-      var isTakeaway = R.pathEq(['model', 'data', 'config', 'element', 'type'], 'takeaway', proposal);
-      var value = R.pathOr(null, ['context', 'context', 'value'], intent);
-      var ref = R.pathOr('---', ['context', 'context', 'ref'], intent);
-
-      return R.ifElse(
-          R.allPass([
-            R.pathEq(['intent', 'context', 'meta', 'type'], 'value'),
-            R.pathEq(['intent', 'context', 'meta', 'id'], actionPlanId),
-            R.always(isTakeaway)
-          ]),
-          R.compose(R.assocPath(['model', 'newTakeaway'], true), R.assocPath(['model', 'takeaway', ref], value)),
           R.identity
       )(proposal);
     };
@@ -550,50 +439,12 @@ var loaded = function(learningElement){
       )(proposal);
     };
 
-    //var updateBok = proposal => {
-    //  var intent = R.prop('intent', proposal);
-    //  return R.ifElse(
-    //      R.compose(R.has('bok'), R.path(['intent', 'context'])),
-    //      R.assocPath(['model', 'data', 'bok'], R.path(['context', 'bok'], intent)),
-    //      R.identity
-    //  )(proposal);
-    //};
-    //
-    //var updateMeasureBank = proposal => {
-    //  var intent = R.prop('intent', proposal);
-    //  return R.ifElse(
-    //      R.compose(R.has('measureBank'), R.path(['intent', 'context'])),
-    //      R.assocPath(['model', 'data', 'measureBank'], R.path(['context', 'measureBank'], intent)),
-    //      R.identity
-    //  )(proposal);
-    //};
-    //
-    //var updateResourceBank = proposal => {
-    //  var intent = R.prop('intent', proposal);
-    //  return R.ifElse(
-    //      R.compose(R.has('resourceBank'), R.path(['intent', 'context'])),
-    //      R.assocPath(['model', 'data', 'resourceBank'], R.path(['context', 'resourceBank'], intent)),
-    //      R.identity
-    //  )(proposal);
-    //};
-    //
-    //var updatePreviousProgress = proposal => {
-    //  var intent = R.prop('intent', proposal);
-    //  return R.ifElse(
-    //      R.compose(R.has('previousProgress'), R.path(['intent', 'context'])),
-    //      R.assocPath(['model', 'data', 'previousProgress'], R.path(['context', 'previousProgress'], intent)),
-    //      R.identity
-    //  )(proposal);
-    //};
-
     var transformations = [ // only run if error obj is empty, otherwise add to model.errors
       updateMode,
       //updateNext,
       updateConfig,
       updateActionplanData,
       updateValue,
-      updateNewValue,
-      updateTakeaway,
       updateNewTakeaway
       //updateBok,
       //updateMeasureBank,
@@ -636,7 +487,7 @@ var loaded = function(learningElement){
       return most.of(intent); // can also do processing...
     }
 
-    if(intent.type === 'bus::getMessage'){
+    if(intent.type === 'bus::getMessage'){ //TODO: handle reactive updates (if takeaway is on same page as question...) without infinite loop?
       return most.of(intent);
     }
 
@@ -708,8 +559,7 @@ var loaded = function(learningElement){
 
   var setActionplanData = function(takeaway){
     var set = R.propOr(function(){}, 'setActionplanData', data);
-    console.log('==> ABOUT TO SET ACTIONPLAN TAKEAWAY', takeaway);
-    set({ takeaway }).tap(function(){ console.log('==> SET ACTIONPLAN TAKEAWAY', arguments) }).drain(); //TODO: find way to make this universal to firebase and tincan api...
+    set({ takeaway }).drain(); //TODO: find way to make this universal to firebase and tincan api...
   };
 
   most.fromEvent('data::setActionplanData', emitter)
@@ -745,7 +595,7 @@ var loaded = function(learningElement){
 
   // ex. meta.type === log... log all lifecycle events globally
   most.fromEvent('bus::sendMessage', emitter)
-    .tap(({ id, type, context }) => { bus.emit('message', { meta: { type: type, id: id }, identity: { type: 'actionplan', id: sessionId }, context }) })
+    .tap(({ id, ref, type, context }) => { bus.emit('message', { meta: { type, id, ref }, identity: { type: 'actionplan', id: sessionId }, context }) })
     .takeUntil(teardown$)
     .drain();
 
