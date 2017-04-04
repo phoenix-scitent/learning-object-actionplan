@@ -327,8 +327,10 @@ var loaded = function(learningElement){
     var takeaway = R.pathOr({}, ['takeaway'], model);
     var newPlan = { [planId]: takeaway };
 
+    var lastUpdatedRef = R.path(['lastUpdated'], model);
+
     if(isNewTakeaway){
-      emitter.emit('data::setActionplanData', newPlan);
+      emitter.emit('data::setActionplanData', { planId, newPlan, lastUpdatedRef });
       emitter.emit('bus::sendMessage', { id: planId, ref, type: 'newPlan', context: { newPlan } });
       emitter.emit('intent', { type: 'setNewTakeaway', context: { newTakeaway: false } });
     }
@@ -429,6 +431,7 @@ var loaded = function(learningElement){
       return R.ifElse(
           R.compose(R.has('value'), R.path(['intent', 'context'])),
           R.compose(
+            R.assocPath(['model', 'lastUpdated'], ref),
             R.assocPath(['model', 'takeaway', ref], { value, text, context }),
             R.assocPath(['model', 'newTakeaway'], true)
           ),
@@ -560,12 +563,28 @@ var loaded = function(learningElement){
   // listen to changes and update remote persistance
 
   // figure out how to get initial subscribe data?
-  R.propOr({ observe: () => {} }, 'getConfig$', data).takeUntil(teardown$).observe( config => emitter.emit('intent', { type: 'data::getConfig', context: { config } }) );
-  R.propOr({ observe: () => {} }, 'getActionplanData$', data).takeUntil(teardown$).observe( takeaway => emitter.emit('intent', { type: 'data::getActionplan', context: { takeaway } }) );
+  R.propOr({ observe: () => {} }, 'getConfig$', data).takeUntil(teardown$).observe( config => {
+    emitter.emit('intent', { type: 'data::getConfig', context: { config } });
 
-  var setActionplanData = function(takeaway){
+    var planId = R.path(['plan', 'id'])(config);
+
+    R.propOr({ observe: () => {} }, 'getActionplanData$', data)({ identifier: planId }).takeUntil(teardown$).observe( takeaway => emitter.emit('intent', { type: 'data::getActionplan', context: { takeaway } }) );
+
+  } );
+
+  var setActionplanData = function({ planId, newPlan, lastUpdatedRef }){
+    var takeaway = newPlan;
     var set = R.propOr(function(){}, 'setActionplanData', data);
-    set({ takeaway }).drain(); //TODO: find way to make this universal to firebase and tincan api...
+
+    R.propOr({ observe: () => {} }, 'getActionplanData$', data)({ identifier: planId }).takeUntil(teardown$).observe( existingTakeaway => {
+
+      var newTakeaway = R.merge(existingTakeaway, R.pick([ref], R.prop(planId, takeaway)));
+
+      set({ takeaway: { [planId]: newTakeaway } });
+
+    } );
+
+    //TODO: find way to make this universal to firebase and tincan api...
   };
 
   most.fromEvent('data::setActionplanData', emitter)

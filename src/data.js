@@ -56,9 +56,7 @@ var dataSetup = function({ sessionId, ref, options, config, dataSource }){
 
   if(tincanApi){
 
-    var planId = R.path(['plan', 'id'])(config);
-
-    var getActionplanData$ = tincanApi.getActionplanData({ identifier: planId });
+    var getActionplanData$ = tincanApi.getActionplanData;
     var setActionplanData = tincanApi.setActionplanData;
 
   }

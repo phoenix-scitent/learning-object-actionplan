@@ -46015,9 +46015,7 @@ var dataSetup = function dataSetup(_ref) {
 
   if (tincanApi) {
 
-    var planId = _ramda2.default.path(['plan', 'id'])(config);
-
-    var getActionplanData$ = tincanApi.getActionplanData({ identifier: planId });
+    var getActionplanData$ = tincanApi.getActionplanData;
     var setActionplanData = tincanApi.setActionplanData;
   }
 
@@ -46407,8 +46405,10 @@ var loaded = function loaded(learningElement) {
     var takeaway = _ramda2.default.pathOr({}, ['takeaway'], model);
     var newPlan = _defineProperty({}, planId, takeaway);
 
+    var lastUpdatedRef = _ramda2.default.path(['lastUpdated'], model);
+
     if (isNewTakeaway) {
-      emitter.emit('data::setActionplanData', newPlan);
+      emitter.emit('data::setActionplanData', { planId: planId, newPlan: newPlan, lastUpdatedRef: lastUpdatedRef });
       emitter.emit('bus::sendMessage', { id: planId, ref: ref, type: 'newPlan', context: { newPlan: newPlan } });
       emitter.emit('intent', { type: 'setNewTakeaway', context: { newTakeaway: false } });
     }
@@ -46492,7 +46492,7 @@ var loaded = function loaded(learningElement) {
       var text = _ramda2.default.path(['context', 'text'], intent);
       var context = _ramda2.default.path(['context', 'context'], intent);
 
-      return _ramda2.default.ifElse(_ramda2.default.compose(_ramda2.default.has('value'), _ramda2.default.path(['intent', 'context'])), _ramda2.default.compose(_ramda2.default.assocPath(['model', 'takeaway', ref], { value: value, text: text, context: context }), _ramda2.default.assocPath(['model', 'newTakeaway'], true)), _ramda2.default.identity)(proposal);
+      return _ramda2.default.ifElse(_ramda2.default.compose(_ramda2.default.has('value'), _ramda2.default.path(['intent', 'context'])), _ramda2.default.compose(_ramda2.default.assocPath(['model', 'lastUpdated'], ref), _ramda2.default.assocPath(['model', 'takeaway', ref], { value: value, text: text, context: context }), _ramda2.default.assocPath(['model', 'newTakeaway'], true)), _ramda2.default.identity)(proposal);
     };
 
     var updateNewTakeaway = function updateNewTakeaway(proposal) {
@@ -46607,15 +46607,33 @@ var loaded = function loaded(learningElement) {
 
   // figure out how to get initial subscribe data?
   _ramda2.default.propOr({ observe: function observe() {} }, 'getConfig$', data).takeUntil(teardown$).observe(function (config) {
-    return emitter.emit('intent', { type: 'data::getConfig', context: { config: config } });
-  });
-  _ramda2.default.propOr({ observe: function observe() {} }, 'getActionplanData$', data).takeUntil(teardown$).observe(function (takeaway) {
-    return emitter.emit('intent', { type: 'data::getActionplan', context: { takeaway: takeaway } });
+    emitter.emit('intent', { type: 'data::getConfig', context: { config: config } });
+
+    var planId = _ramda2.default.path(['plan', 'id'])(config);
+
+    _ramda2.default.propOr({ observe: function observe() {} }, 'getActionplanData$', data)({ identifier: planId }).takeUntil(teardown$).observe(function (takeaway) {
+      return emitter.emit('intent', { type: 'data::getActionplan', context: { takeaway: takeaway } });
+    });
   });
 
-  var setActionplanData = function setActionplanData(takeaway) {
+  var setActionplanData = function setActionplanData(_ref3) {
+    var planId = _ref3.planId,
+        newPlan = _ref3.newPlan,
+        lastUpdatedRef = _ref3.lastUpdatedRef;
+
+    var takeaway = newPlan;
     var set = _ramda2.default.propOr(function () {}, 'setActionplanData', data);
-    set({ takeaway: takeaway }).drain(); //TODO: find way to make this universal to firebase and tincan api...
+
+    _ramda2.default.propOr({ observe: function observe() {} }, 'getActionplanData$', data)({ identifier: planId }).takeUntil(teardown$).observe(function (existingTakeaway) {
+
+      var newTakeaway = _ramda2.default.merge(existingTakeaway, _ramda2.default.pick([ref], _ramda2.default.prop(planId, takeaway)));
+
+      console.log(takeaway, existingTakeaway, newTakeaway);
+
+      set({ takeaway: _defineProperty({}, planId, newTakeaway) });
+    });
+
+    //TODO: find way to make this universal to firebase and tincan api...
   };
 
   most.fromEvent('data::setActionplanData', emitter).tap(setActionplanData).takeUntil(teardown$).drain();
@@ -46642,11 +46660,11 @@ var loaded = function loaded(learningElement) {
   }).takeUntil(teardown$).drain();
 
   // ex. meta.type === log... log all lifecycle events globally
-  most.fromEvent('bus::sendMessage', emitter).tap(function (_ref3) {
-    var id = _ref3.id,
-        ref = _ref3.ref,
-        type = _ref3.type,
-        context = _ref3.context;
+  most.fromEvent('bus::sendMessage', emitter).tap(function (_ref4) {
+    var id = _ref4.id,
+        ref = _ref4.ref,
+        type = _ref4.type,
+        context = _ref4.context;
     bus.emit('message', { meta: { type: type, id: id, ref: ref }, identity: { type: 'actionplan', id: sessionId }, context: context });
   }).takeUntil(teardown$).drain();
 
