@@ -1,6 +1,5 @@
 import R from 'ramda';
 import * as most from 'most';
-import classie from 'desandro-classie';
 import { generateUUID } from './helpers.js';
 
 var snabbdom = require('snabbdom');
