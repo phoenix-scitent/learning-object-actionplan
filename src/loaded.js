@@ -101,6 +101,14 @@ var loaded = function(learningElement){
       .drain();
   };
 
+  var editorOrSpinner = function(model){
+    if('undefined' === typeof model.takeaway){
+      return h('div', { attrs: { [`class`]: 'loader' } }, 'Loading...' );
+    } else {
+      return editor(model);
+    }
+  }
+
   var editor = function(model){
     var placeholder = R.pathOr('', ['data', 'config', 'element', 'meta', 'placeholder'], model);
     var text = R.pathOr('', ['data', 'config', 'element', 'meta', 'text'], model);
@@ -121,7 +129,7 @@ var loaded = function(learningElement){
       virtualize(prehead),
       questionTitle(model),
       virtualize(prebody),
-      editor(model),
+      editorOrSpinner(model),
       virtualize(prefoot)
     ]);
   };
